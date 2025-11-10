@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Chatbot</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    #chat { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; }
+    .user { color: blue; }
+    .bot { color: green; }
+  </style>
+</head>
+<body>
+  <h2>Chatbot de Suporte</h2>
+  <div id="chat"></div>
+  <input id="message" placeholder="Digite sua mensagem..." />
+  <button onclick="sendMessage()">Enviar</button>
+
+  <script>
+    async function sendMessage() {
+      const message = document.getElementById("message").value;
+      const chat = document.getElementById("chat");
+      chat.innerHTML += `<div class="user">Você: ${message}</div>`;
+      document.getElementById("message").value = "";
+
+      const res = await fetch("http://localhost:3000/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+      });
+      const data = await res.json();
+
+      chat.innerHTML += `<div class="bot">Bot: ${data.reply}</div>`;
+    }
+  </script>
+</body>
+</html>

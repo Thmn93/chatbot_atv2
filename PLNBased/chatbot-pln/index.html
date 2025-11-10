@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Chatbot com NLP</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    #chat { border: 1px solid #ccc; height: 300px; overflow-y: auto; padding: 10px; }
+    .user { color: blue; margin: 4px 0; }
+    .bot { color: green; margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <h2>Chatbot com NLP</h2>
+  <div id="chat"></div>
+  <input id="message" placeholder="Digite sua mensagem..." />
+  <button onclick="sendMessage()">Enviar</button>
+
+  <script>
+    async function sendMessage() {
+      const msg = document.getElementById("message").value;
+      const chat = document.getElementById("chat");
+      chat.innerHTML += `<div class='user'>Você: ${msg}</div>`;
+      document.getElementById("message").value = "";
+
+      const res = await fetch("http://localhost:3000/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg })
+      });
+      const data = await res.json();
+      chat.innerHTML += `<div class='bot'>Bot (${data.intent}): ${data.reply}</div>`;
+    }
+  </script>
+</body>
+</html>
