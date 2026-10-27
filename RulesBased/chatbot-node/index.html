@@ -2,51 +2,252 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <title>Chatbot Baseado em Regras</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chatbot de Suporte — Baseado em Regras</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
-    #chat { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; margin-bottom: 10px; border-radius: 4px; }
-    .user { color: #0056b3; margin: 6px 0; }
-    .bot { color: #1e7e34; margin: 6px 0; }
-    .error { color: #c82333; margin: 6px 0; font-size: 0.9em; }
-    .controls { display: flex; gap: 8px; }
-    #message { flex: 1; padding: 8px; }
-    button { padding: 8px 16px; cursor: pointer; }
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #3730a3;
+      --accent: #06b6d4;
+      --bg: #eef2ff;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --bot-bubble: #f1f5f9;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+      background: linear-gradient(135deg, #c7d2fe 0%, #e0f2fe 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      color: var(--text);
+    }
+    .app {
+      width: 100%;
+      max-width: 520px;
+      height: min(720px, 94vh);
+      background: var(--card);
+      border-radius: 20px;
+      box-shadow: 0 20px 50px rgba(30, 41, 59, 0.25);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .avatar-lg {
+      width: 46px; height: 46px; border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      display: grid; place-items: center; font-size: 24px;
+    }
+    header h1 { font-size: 17px; font-weight: 600; }
+    header .status { font-size: 12.5px; opacity: .9; display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 3px rgba(74,222,128,.3); }
+    .badge-mode {
+      margin-left: auto; font-size: 11px; font-weight: 600; letter-spacing: .4px;
+      background: rgba(255,255,255,.18); padding: 5px 10px; border-radius: 999px;
+    }
+    #chat {
+      flex: 1; overflow-y: auto; padding: 18px 16px;
+      background: var(--bg);
+      display: flex; flex-direction: column; gap: 14px;
+      scroll-behavior: smooth;
+    }
+    .row { display: flex; gap: 8px; align-items: flex-end; max-width: 100%; animation: pop .25s ease-out; }
+    .row.user { flex-direction: row-reverse; }
+    @keyframes pop { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .avatar {
+      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+      display: grid; place-items: center; font-size: 16px; background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,.15);
+    }
+    .row.user .avatar { background: var(--primary); color: #fff; }
+    .bubble-wrap { display: flex; flex-direction: column; max-width: 78%; }
+    .row.user .bubble-wrap { align-items: flex-end; }
+    .bubble {
+      padding: 10px 14px; border-radius: 16px; font-size: 14.5px; line-height: 1.5;
+      white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere;
+    }
+    .row.bot .bubble { background: var(--bot-bubble); border-bottom-left-radius: 4px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+    .row.user .bubble { background: linear-gradient(135deg, var(--primary), #6366f1); color: #fff; border-bottom-right-radius: 4px; }
+    .meta { font-size: 11px; color: var(--muted); margin-top: 4px; display: flex; gap: 8px; align-items: center; padding: 0 4px; }
+    .tag { background: #e0e7ff; color: var(--primary-dark); padding: 1px 8px; border-radius: 999px; font-weight: 600; }
+    .row.error .bubble { background: #fee2e2; color: #991b1b; }
+
+    .typing .bubble { display: flex; gap: 4px; padding: 14px 16px; }
+    .typing span { width: 7px; height: 7px; background: #94a3b8; border-radius: 50%; animation: blink 1.2s infinite; }
+    .typing span:nth-child(2) { animation-delay: .2s; }
+    .typing span:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink { 0%, 80%, 100% { opacity: .3; transform: scale(.8); } 40% { opacity: 1; transform: scale(1); } }
+
+    #suggestions {
+      display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px 0; background: #fff; min-height: 10px;
+    }
+    .chip {
+      border: 1px solid #c7d2fe; background: #eef2ff; color: var(--primary-dark);
+      padding: 6px 12px; border-radius: 999px; font-size: 13px; cursor: pointer; transition: all .15s;
+    }
+    .chip:hover { background: var(--primary); color: #fff; border-color: var(--primary); transform: translateY(-1px); }
+
+    form { display: flex; gap: 10px; padding: 12px 16px 16px; background: #fff; }
+    #message {
+      flex: 1; border: 1px solid #cbd5e1; border-radius: 999px; padding: 12px 18px; font-size: 14.5px; outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    #message:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,.18); }
+    button.send {
+      border: none; background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff;
+      width: 46px; height: 46px; border-radius: 50%; font-size: 18px; cursor: pointer; transition: transform .15s;
+    }
+    button.send:hover { transform: scale(1.07); }
+    button.send:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    @media (max-width: 480px) { .app { height: 100vh; border-radius: 0; } body { padding: 0; } }
   </style>
 </head>
 <body>
-  <h2>Chatbot de Suporte (Baseado em Regras)</h2>
-  <p><small>Pergunte sobre: <b>login</b>, <b>planos</b>, <b>horário</b>, <b>localização</b>, <b>promoções</b> ou <b>atendente</b>.</small></p>
-  <div id="chat"></div>
-  <div class="controls">
-    <input id="message" placeholder="Digite sua mensagem..." onkeydown="if(event.key === 'Enter') sendMessage()" />
-    <button onclick="sendMessage()">Enviar</button>
+  <div class="app">
+    <header>
+      <div class="avatar-lg">🤖</div>
+      <div>
+        <h1>Assistente de Suporte</h1>
+        <div class="status"><span class="dot"></span> Online agora</div>
+      </div>
+      <div class="badge-mode">REGRAS</div>
+    </header>
+
+    <div id="chat" aria-live="polite"></div>
+    <div id="suggestions"></div>
+
+    <form id="form" autocomplete="off">
+      <input id="message" placeholder="Digite sua mensagem..." autofocus />
+      <button class="send" id="sendBtn" type="submit" title="Enviar" aria-label="Enviar">➤</button>
+    </form>
   </div>
 
   <script>
-    async function sendMessage() {
-      const input = document.getElementById("message");
-      const message = input.value.trim();
-      if (!message) return;
+    // Quando aberto via http://localhost:3001 usa a mesma origem; se aberto como arquivo, aponta para o servidor.
+    const API = location.protocol.startsWith("http") ? "" : "http://localhost:3001";
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("message");
+    const sendBtn = document.getElementById("sendBtn");
+    const suggestionsBox = document.getElementById("suggestions");
 
-      const chat = document.getElementById("chat");
-      chat.innerHTML += `<div class="user"><b>Você:</b> ${message}</div>`;
-      input.value = "";
+    const now = () => new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+    // Converte **negrito** em <strong> sem usar innerHTML (evita injeção de HTML)
+    function renderText(container, text) {
+      text.split(/(\*\*[^*]+\*\*)/g).forEach((part) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+          const strong = document.createElement("strong");
+          strong.textContent = part.slice(2, -2);
+          container.appendChild(strong);
+        } else {
+          container.appendChild(document.createTextNode(part));
+        }
+      });
+    }
+
+    function addMessage(who, text, tag) {
+      const row = document.createElement("div");
+      row.className = "row " + who;
+
+      const avatar = document.createElement("div");
+      avatar.className = "avatar";
+      avatar.textContent = who === "user" ? "🙂" : "🤖";
+
+      const wrap = document.createElement("div");
+      wrap.className = "bubble-wrap";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      renderText(bubble, text);
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      if (tag) {
+        const t = document.createElement("span");
+        t.className = "tag";
+        t.textContent = tag;
+        meta.appendChild(t);
+      }
+      const time = document.createElement("span");
+      time.textContent = now();
+      meta.appendChild(time);
+
+      wrap.append(bubble, meta);
+      row.append(avatar, wrap);
+      chat.appendChild(row);
       chat.scrollTop = chat.scrollHeight;
+      return row;
+    }
 
+    function showTyping() {
+      const row = document.createElement("div");
+      row.className = "row bot typing";
+      row.innerHTML = '<div class="avatar">🤖</div><div class="bubble-wrap"><div class="bubble"><span></span><span></span><span></span></div></div>';
+      chat.appendChild(row);
+      chat.scrollTop = chat.scrollHeight;
+      return row;
+    }
+
+    function setSuggestions(list) {
+      suggestionsBox.innerHTML = "";
+      (list || []).forEach((s) => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "chip";
+        chip.textContent = s;
+        chip.onclick = () => send(s);
+        suggestionsBox.appendChild(chip);
+      });
+    }
+
+    async function send(text) {
+      const message = (text ?? input.value).trim();
+      if (!message) return;
+      input.value = "";
+      setSuggestions([]);
+      addMessage("user", message);
+      sendBtn.disabled = true;
+
+      const typing = showTyping();
       try {
-        const res = await fetch("http://localhost:3001/chat", {
+        const res = await fetch(API + "/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message })
         });
+        if (!res.ok) throw new Error("HTTP " + res.status);
         const data = await res.json();
-        chat.innerHTML += `<div class="bot"><b>Bot:</b> ${data.reply}</div>`;
+        await new Promise((r) => setTimeout(r, 450)); // pequeno atraso para efeito de digitação
+        typing.remove();
+        addMessage("bot", data.reply, data.topic);
+        setSuggestions(data.suggestions);
       } catch (err) {
-        chat.innerHTML += `<div class="error"><b>Erro:</b> Não foi possível conectar ao servidor (http://localhost:3001). Verifique se o servidor está rodando com <code>node server.js</code> na pasta <code>RulesBased/chatbot-node</code>.</div>`;
+        typing.remove();
+        const row = addMessage("bot", "Não foi possível conectar ao servidor (porta 3001). Inicie-o com:  node server.js  na pasta RulesBased/chatbot-node.");
+        row.classList.add("error");
+      } finally {
+        sendBtn.disabled = false;
+        input.focus();
       }
-      chat.scrollTop = chat.scrollHeight;
     }
+
+    document.getElementById("form").addEventListener("submit", (e) => { e.preventDefault(); send(); });
+
+    // Mensagem inicial
+    addMessage("bot", "Olá! 👋 Eu sou o assistente virtual de suporte. Posso ajudar com **login**, **planos**, **promoções**, **pagamento**, **horário** e **localização**.\n\nComo posso ajudar?");
+    setSuggestions(["Quais são os planos?", "Ver promoções", "Horário de funcionamento", "Esqueci minha senha"]);
   </script>
 </body>
 </html>
