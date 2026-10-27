@@ -2,35 +2,50 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <title>Chatbot</title>
+  <title>Chatbot Baseado em Regras</title>
   <style>
-    body { font-family: Arial; padding: 20px; }
-    #chat { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; }
-    .user { color: blue; }
-    .bot { color: green; }
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
+    #chat { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; margin-bottom: 10px; border-radius: 4px; }
+    .user { color: #0056b3; margin: 6px 0; }
+    .bot { color: #1e7e34; margin: 6px 0; }
+    .error { color: #c82333; margin: 6px 0; font-size: 0.9em; }
+    .controls { display: flex; gap: 8px; }
+    #message { flex: 1; padding: 8px; }
+    button { padding: 8px 16px; cursor: pointer; }
   </style>
 </head>
 <body>
-  <h2>Chatbot de Suporte</h2>
+  <h2>Chatbot de Suporte (Baseado em Regras)</h2>
+  <p><small>Pergunte sobre: <b>login</b>, <b>planos</b>, <b>horário</b>, <b>localização</b>, <b>promoções</b> ou <b>atendente</b>.</small></p>
   <div id="chat"></div>
-  <input id="message" placeholder="Digite sua mensagem..." />
-  <button onclick="sendMessage()">Enviar</button>
+  <div class="controls">
+    <input id="message" placeholder="Digite sua mensagem..." onkeydown="if(event.key === 'Enter') sendMessage()" />
+    <button onclick="sendMessage()">Enviar</button>
+  </div>
 
   <script>
     async function sendMessage() {
-      const message = document.getElementById("message").value;
+      const input = document.getElementById("message");
+      const message = input.value.trim();
+      if (!message) return;
+
       const chat = document.getElementById("chat");
-      chat.innerHTML += `<div class="user">Você: ${message}</div>`;
-      document.getElementById("message").value = "";
+      chat.innerHTML += `<div class="user"><b>Você:</b> ${message}</div>`;
+      input.value = "";
+      chat.scrollTop = chat.scrollHeight;
 
-      const res = await fetch("http://localhost:3000/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message })
-      });
-      const data = await res.json();
-
-      chat.innerHTML += `<div class="bot">Bot: ${data.reply}</div>`;
+      try {
+        const res = await fetch("http://localhost:3001/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message })
+        });
+        const data = await res.json();
+        chat.innerHTML += `<div class="bot"><b>Bot:</b> ${data.reply}</div>`;
+      } catch (err) {
+        chat.innerHTML += `<div class="error"><b>Erro:</b> Não foi possível conectar ao servidor (http://localhost:3001). Verifique se o servidor está rodando com <code>node server.js</code> na pasta <code>RulesBased/chatbot-node</code>.</div>`;
+      }
+      chat.scrollTop = chat.scrollHeight;
     }
   </script>
 </body>
